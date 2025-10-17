@@ -1,15 +1,27 @@
+<?hh
+
 enum RequestType: string {
     GET = "GET";
     PUT = "PUT";
     PATCH = "PATCH";
-    UPDATE = "UPDATES",
-    DELETE = "DELETES"
+    UPDATE = "UPDATES";
+    DELETE = "DELETES";
 }
 
 class Message {
     public RequestType $requestType;
     public string $topic;
     public dict<string, vec<int>> $content;
+
+    public function __construct(
+        RequestType $requestType,
+        string $topic,
+        dict<string, vec<int>> $content
+    ): void {
+        $this->requestType = $requestType;
+        $this->topic = $topic;
+        $this->content = $content;
+    }
 }
 
 class Node {
@@ -20,7 +32,13 @@ class Node {
     public ?Node $prev;
 
 
-    public function __construct(?string $userId=null, ?Message $message=null, ?int $serverId=null, ?Node $next=null, ?Node $prev=null): void {
+    public function __construct(
+        ?string $userId=null,
+        ?Message $message=null,
+        ?int $serverId=null,
+        ?Node $next=null,
+        ?Node $prev=null
+    ): void {
         $this->userId = $userId;
         $this->message = $message;
         $this->serverId = $serverId;
@@ -33,9 +51,9 @@ class MessagingQueue {
     public Node $head;
     public Node $tail;
 
-    public function __construct(Node $head, Node $tail): void {
-        $this->head = new Node("x","x",-1);
-        $this->tail = new Node("x","x",-1);
+    public function __construct(): void {
+        $this->head = new Node("head",null,-1);
+        $this->tail = new Node("tail",null,-1);
 
         $this->head->next = $this->tail;
         $this->tail->prev = $this->head;
@@ -44,18 +62,37 @@ class MessagingQueue {
     public function add(Node $node): void {
         // head-> n1 -> tail
         $curr = $this->head;
-        $curr->next->prev = $node;
-        $node->next = $curr->next
+        $nextNode = $curr->next;
+        
+        if ($nextNode !== null) {
+            $nextNode->prev = $node;
+        }
+
+        $node->next = $nextNode;
         $curr->next = $node;
         $node->prev = $curr;
     }
 
     public function pop(): ?Node {
         $node = $this->tail->prev;
-
-        $node->prev->next = $node->next;
-        $node->next->prev = $node->prev;
+        if ($node === $this->head) {
+            return null;
+        }
+        
+        $prevNode = $node->prev;
+        $nextNode = $node->next;
+        
+        if ($prevNode !== null) {
+            $prevNode->next = $nextNode;
+        }
+        if ($nextNode !== null) {
+            $nextNode->prev = $prevNode;
+        }
 
         return $node;
+    }
+
+    public function isEmpty(): bool {
+        return $this->head->next === $this->tail;
     }
 }
